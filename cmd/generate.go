@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -11,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed templates
+//go:embed templates templates/.gitignore.tmpl templates/.github
 var templates embed.FS
 
 var rootCmd = &cobra.Command{
@@ -76,6 +77,8 @@ func runNew(cmd *cobra.Command, args []string) error {
 		"templates/pkg/database/db.go.tmpl":        "pkg/database/db.go",
 		"templates/README.md":                      "README.md",
 		"templates/go.mod.tmpl":                    "go.mod",
+		"templates/.gitignore.tmpl":                ".gitignore",
+		"templates/.github/workflows/ci.yml.tmpl":  ".github/workflows/ci.yml",
 	}
 
 	data := struct {
@@ -90,6 +93,11 @@ func runNew(cmd *cobra.Command, args []string) error {
 		if err := generateFile(tmpl, filepath.Join(projectName, dest), data); err != nil {
 			return fmt.Errorf("failed to generate %s: %w", dest, err)
 		}
+	}
+
+	// Initialize git repository
+	if err := initGitRepo(projectName); err != nil {
+		return fmt.Errorf("failed to initialize git repository: %w", err)
 	}
 
 	fmt.Printf("Successfully created project %s\n", projectName)
@@ -125,4 +133,19 @@ func generateFile(tmplPath, destPath string, data interface{}) error {
 	}
 
 	return tmpl.Execute(f, data)
+}
+
+func initGitRepo(projectPath string) error {
+	// Change to project directory
+	if err := os.Chdir(projectPath); err != nil {
+		return fmt.Errorf("failed to change directory: %w", err)
+	}
+	defer os.Chdir("..")
+
+	// Initialize git repository
+	if err := exec.Command("git", "init").Run(); err != nil {
+		return fmt.Errorf("failed to initialize git repository: %w", err)
+	}
+
+	return nil
 }
