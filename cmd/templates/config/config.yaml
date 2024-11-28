@@ -12,7 +12,3 @@ database:
 
 log:
   level: info
-  filename: logs/app.log
-  maxsize: 100    # megabytes
-  maxage: 7       # days
-  maxbackups: 3   # number of backups 

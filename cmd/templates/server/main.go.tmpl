@@ -10,6 +10,7 @@ import (
 	"{{.ModuleName}}/pkg/logger"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,7 +26,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "config/config.yaml", "config file path")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "info", "log level (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "", "log level (debug, info, warn, error), overrides config file")
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -44,9 +45,20 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 
+	cfg := config.Get()
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+
+	// Log server startup
+	logger.Info("Starting HTTP server",
+		zap.String("address", addr),
+		zap.String("mode", cfg.Server.Mode),
+		zap.String("config", configFile),
+		zap.String("log_level", logLevel),
+	)
+
 	// Start HTTP server
 	router := api.SetupRouter()
-	return router.Run(fmt.Sprintf(":%d", config.Get().Server.Port))
+	return router.Run(addr)
 }
 
 func main() {

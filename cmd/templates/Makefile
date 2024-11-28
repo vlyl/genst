@@ -29,7 +29,7 @@ swagger:
 .PHONY: deps
 deps:
 	@echo "Installing dependencies..."
-	@go mod download
+	@go mod tidy
 
 .PHONY: lint
 lint:

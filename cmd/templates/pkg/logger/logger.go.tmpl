@@ -2,10 +2,10 @@ package logger
 
 import (
 	"fmt"
+	"os"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"{{.ModuleName}}/internal/config"
 )
@@ -15,14 +15,9 @@ var log *zap.Logger
 func Init(level string) error {
 	cfg := config.Get()
 
-	// Configure log rotation
-	writer := &lumberjack.Logger{
-		Filename:   cfg.Log.Filename,
-		MaxSize:    cfg.Log.MaxSize,
-		MaxAge:     cfg.Log.MaxAge,
-		MaxBackups: cfg.Log.MaxBackups,
-		LocalTime:  true,
-		Compress:   true,
+	// Use config level if command line level is not specified
+	if level == "" {
+		level = cfg.Log.Level
 	}
 
 	// Parse log level
@@ -35,15 +30,22 @@ func Init(level string) error {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	// Create core
+	// Create core with console output
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderConfig),
-		zapcore.AddSync(writer),
+		zapcore.AddSync(os.Stdout),
 		zapLevel,
 	)
 
-	// Create logger
+	// Create logger with caller info
 	log = zap.New(core, zap.AddCaller())
+
+	// Log initialization success
+	Info("Logger initialized successfully", 
+		zap.String("level", level),
+		zap.String("encoding", "json"),
+	)
+
 	return nil
 }
 
