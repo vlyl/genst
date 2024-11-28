@@ -27,11 +27,16 @@ type DatabaseConfig struct {
 }
 
 type LogConfig struct {
-	Level      string `mapstructure:"level"`
-	Filename   string `mapstructure:"filename"`
-	MaxSize    int    `mapstructure:"maxsize"`
-	MaxAge     int    `mapstructure:"maxage"`
-	MaxBackups int    `mapstructure:"maxbackups"`
+	Level string    `mapstructure:"level"`
+	File  FileLog   `mapstructure:"file"`
+}
+
+type FileLog struct {
+	Path       string `mapstructure:"path"`
+	MaxSize    int    `mapstructure:"max_size"`
+	MaxAge     int    `mapstructure:"max_age"`
+	MaxBackups int    `mapstructure:"max_backups"`
+	Compress   bool   `mapstructure:"compress"`
 }
 
 var config Config

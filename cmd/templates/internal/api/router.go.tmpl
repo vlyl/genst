@@ -1,14 +1,28 @@
 package api
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
+
+	"{{.ModuleName}}/pkg/logger"
 )
 
 // SetupRouter initializes the Gin router and registers all routes
 func SetupRouter() *gin.Engine {
-	router := gin.Default()
+	// Set gin mode
+	gin.SetMode(gin.ReleaseMode)
+
+	// Use zap as gin's logger
+	gin.DefaultWriter = &zapWriter{logger: logger.Get()}
+
+	router := gin.New()
+	
+	// Use zap logger and recovery middleware
+	router.Use(ginLogger(), gin.Recovery())
 
 	// Register swagger docs
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -21,4 +35,46 @@ func SetupRouter() *gin.Engine {
 	})
 
 	return router
+}
+
+// Gin middleware to log requests using zap
+func ginLogger() gin.HandlerFunc {
+	l := logger.With(zap.String("component", "http"))
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+
+		c.Next()
+
+		fields := []zap.Field{
+			zap.Int("status", c.Writer.Status()),
+			zap.String("method", c.Request.Method),
+			zap.String("path", path),
+			zap.String("query", query),
+			zap.String("ip", c.ClientIP()),
+			zap.Duration("latency", time.Since(start)),
+			zap.String("ua", c.Request.UserAgent()),
+		}
+
+		status := c.Writer.Status()
+		switch {
+		case status >= 500:
+			l.Error("Server error", fields...)
+		case status >= 400:
+			l.Warn("Client error", fields...)
+		default:
+			l.Debug("Request", fields...)
+		}
+	}
+}
+
+// zapWriter wraps zap logger to implement io.Writer
+type zapWriter struct {
+	logger *zap.Logger
+}
+
+func (w *zapWriter) Write(p []byte) (n int, err error) {
+	w.logger.Info(string(p))
+	return len(p), nil
 }

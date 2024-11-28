@@ -2,10 +2,13 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"{{.ModuleName}}/internal/config"
 )
@@ -26,27 +29,108 @@ func Init(level string) error {
 		return fmt.Errorf("invalid log level: %w", err)
 	}
 
-	// Create encoder config
-	encoderConfig := zap.NewProductionEncoderConfig()
-	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	// Create encoder configs
+	consoleEncoder := zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
+		TimeKey:        "",
+		LevelKey:       "L",
+		NameKey:        "N",
+		CallerKey:      "C",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "M",
+		StacktraceKey:  "S",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+		EncodeName:     zapcore.FullNameEncoder,
+	})
 
-	// Create core with console output
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderConfig),
-		zapcore.AddSync(os.Stdout),
-		zapLevel,
+	// Create outputs
+	consoleDecorator := zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
+		TimeKey:        "",
+		EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05"),
+		LineEnding:     "",
+	})
+
+	consoleOutput := zapcore.AddSync(&prefixWriter{
+		out:      os.Stdout,
+		encoder:  consoleDecorator,
+		timeKey:  "ts",
+	})
+
+	fileOutput := zapcore.AddSync(&lumberjack.Logger{
+		Filename:   cfg.Log.File.Path,
+		MaxSize:    cfg.Log.File.MaxSize,
+		MaxAge:     cfg.Log.File.MaxAge,
+		MaxBackups: cfg.Log.File.MaxBackups,
+		Compress:   cfg.Log.File.Compress,
+	})
+
+	// Create core with multiple outputs
+	core := zapcore.NewTee(
+		zapcore.NewCore(consoleEncoder, consoleOutput, zapLevel),
+		zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), fileOutput, zapLevel),
 	)
 
 	// Create logger with caller info
-	log = zap.New(core, zap.AddCaller())
+	log = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+
+	// Create logs directory if it doesn't exist
+	if err := os.MkdirAll("logs", 0755); err != nil {
+		return fmt.Errorf("failed to create logs directory: %w", err)
+	}
 
 	// Log initialization success
-	Info("Logger initialized successfully", 
+	Info("Logger initialized",
 		zap.String("level", level),
-		zap.String("encoding", "json"),
+		zap.String("file", cfg.Log.File.Path),
 	)
 
 	return nil
+}
+
+// prefixWriter adds timestamp prefix to each log line
+type prefixWriter struct {
+	out      io.Writer
+	encoder  zapcore.Encoder
+	timeKey  string
+}
+
+func (w *prefixWriter) Write(p []byte) (n int, err error) {
+	// Add timestamp
+	entry := zapcore.Entry{Time: time.Now()}
+	buf, err := w.encoder.EncodeEntry(entry, []zapcore.Field{})
+	if err != nil {
+		return 0, err
+	}
+	
+	// Write timestamp and log message
+	_, err = fmt.Fprintf(w.out, "%s%s", buf.String(), p)
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+// Sugar returns a sugared logger
+func Sugar() *zap.SugaredLogger {
+	return log.Sugar()
+}
+
+// Get returns the global logger instance
+func Get() *zap.Logger {
+	return log
+}
+
+// Named returns a named logger
+func Named(name string) *zap.Logger {
+	return log.Named(name)
+}
+
+// With creates a child logger and adds structured context to it
+func With(fields ...zap.Field) *zap.Logger {
+	return log.With(fields...)
 }
 
 func Info(msg string, fields ...zap.Field) {
