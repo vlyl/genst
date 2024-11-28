@@ -1,0 +1,77 @@
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": ["http", "https"],
+    "swagger": "2.0",
+    "info": {
+        "description": "This is the API documentation.",
+        "title": "API Documentation",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/ping": {
+            "get": {
+                "description": "Get the server's health status",
+                "consumes": ["application/json"],
+                "produces": ["application/json"],
+                "tags": ["system"],
+                "summary": "Health check endpoint",
+                "responses": {
+                    "200": {
+                        "description": "Server is healthy",
+                        "schema": {
+                            "$ref": "#/definitions/ping.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "ping.Response": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "pong"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2024-01-28T15:04:05Z"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info
+var SwaggerInfo = &swag.Spec{
+	Version:     "1.0",
+	Host:        "localhost:8080",
+	BasePath:    "/",
+	Schemes:     []string{"http", "https"},
+	Title:       "API Documentation",
+	Description: "This is the API documentation.",
+}
+
+func init() {
+	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+} 

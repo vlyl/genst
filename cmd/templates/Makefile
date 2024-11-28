@@ -23,8 +23,10 @@ test:
 	@go test -v ./...
 
 swagger:
+	@echo "Checking swag installation..."
+	@which swag > /dev/null || (echo "Installing swag..." && go install github.com/swaggo/swag/cmd/swag@latest)
 	@echo "Generating Swagger docs..."
-	@swag init -g cmd/server/main.go
+	@swag init -g internal/api/router.go -o docs
 
 .PHONY: deps
 deps:

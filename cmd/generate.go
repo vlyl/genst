@@ -67,18 +67,20 @@ func runNew(cmd *cobra.Command, args []string) error {
 
 	// Generate files from templates
 	templateFiles := map[string]string{
-		"templates/scripts/start.sh":               "scripts/start.sh",
-		"templates/Makefile":                       "Makefile",
-		"templates/config/config.yaml":             "config/config.yaml",
-		"templates/server/main.go.tmpl":            "cmd/server/main.go",
-		"templates/internal/api/router.go.tmpl":    "internal/api/router.go",
-		"templates/internal/config/config.go.tmpl": "internal/config/config.go",
-		"templates/pkg/logger/logger.go.tmpl":      "pkg/logger/logger.go",
-		"templates/pkg/database/db.go.tmpl":        "pkg/database/db.go",
-		"templates/README.md":                      "README.md",
-		"templates/go.mod.tmpl":                    "go.mod",
-		"templates/.gitignore.tmpl":                ".gitignore",
-		"templates/.github/workflows/ci.yml.tmpl":  ".github/workflows/ci.yml",
+		"templates/scripts/start.sh":                  "scripts/start.sh",
+		"templates/Makefile":                          "Makefile",
+		"templates/config/config.yaml":                "config/config.yaml",
+		"templates/server/main.go.tmpl":               "cmd/server/main.go",
+		"templates/internal/api/router.go.tmpl":       "internal/api/router.go",
+		"templates/internal/api/ping/handler.go.tmpl": "internal/api/ping/handler.go",
+		"templates/internal/config/config.go.tmpl":    "internal/config/config.go",
+		"templates/pkg/logger/logger.go.tmpl":         "pkg/logger/logger.go",
+		"templates/pkg/database/db.go.tmpl":           "pkg/database/db.go",
+		"templates/README.md":                         "README.md",
+		"templates/go.mod.tmpl":                       "go.mod",
+		"templates/.gitignore.tmpl":                   ".gitignore",
+		"templates/.github/workflows/ci.yml.tmpl":     ".github/workflows/ci.yml",
+		"templates/docs/docs.go.tmpl":                 "docs/docs.go",
 	}
 
 	data := struct {

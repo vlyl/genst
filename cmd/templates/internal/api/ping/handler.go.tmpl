@@ -1,0 +1,42 @@
+package ping
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"{{.ModuleName}}/pkg/logger"
+)
+
+// Response represents the ping response
+type Response struct {
+	Message   string    `json:"message" example:"pong"`
+	Timestamp time.Time `json:"timestamp" example:"2024-01-28T15:04:05Z"`
+	Version   string    `json:"version" example:"1.0.0"`
+}
+
+// @Summary Health check endpoint
+// @Description Get the server's health status
+// @Tags system
+// @Accept json
+// @Produce json
+// @Success 200 {object} Response "Server is healthy"
+// @Router /ping [get]
+func Handler(c *gin.Context) {
+	resp := Response{
+		Message:   "pong",
+		Timestamp: time.Now().UTC(),
+		Version:   "1.0.0", // TODO: Use actual version from build info
+	}
+
+	logger.With(
+		zap.String("component", "ping"),
+	).Debug("Health check request",
+		zap.String("remote_addr", c.ClientIP()),
+		zap.Time("timestamp", resp.Timestamp),
+	)
+
+	c.JSON(http.StatusOK, resp)
+} 
