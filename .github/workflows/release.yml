@@ -2,9 +2,12 @@ name: Build and Release
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    # 只在创建 tag 时触发
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # 添加创建 release 的权限
 
 jobs:
   build:
@@ -21,6 +24,7 @@ jobs:
 
       - name: Build for multiple platforms
         run: |
+          mkdir -p bin
           # Build for macOS
           GOOS=darwin GOARCH=amd64 go build -o bin/genst-darwin-amd64
           GOOS=darwin GOARCH=arm64 go build -o bin/genst-darwin-arm64
@@ -28,16 +32,13 @@ jobs:
           # Build for Linux
           GOOS=linux GOARCH=amd64 go build -o bin/genst-linux-amd64
           GOOS=linux GOARCH=arm64 go build -o bin/genst-linux-arm64
+          
+          # Add execute permission
+          chmod +x bin/*
 
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
-          draft: false
-          prerelease: false
           files: |
             bin/genst-darwin-amd64
             bin/genst-darwin-arm64
@@ -51,4 +52,4 @@ jobs:
         with:
           name: binaries
           path: bin/
-          retention-days: 5 
+          retention-days: 5
