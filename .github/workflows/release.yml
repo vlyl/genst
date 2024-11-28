@@ -1,0 +1,54 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Build for multiple platforms
+        run: |
+          # Build for macOS
+          GOOS=darwin GOARCH=amd64 go build -o bin/genst-darwin-amd64
+          GOOS=darwin GOARCH=arm64 go build -o bin/genst-darwin-arm64
+          
+          # Build for Linux
+          GOOS=linux GOARCH=amd64 go build -o bin/genst-linux-amd64
+          GOOS=linux GOARCH=arm64 go build -o bin/genst-linux-arm64
+
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            bin/genst-darwin-amd64
+            bin/genst-darwin-arm64
+            bin/genst-linux-amd64
+            bin/genst-linux-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: bin/
+          retention-days: 5 
