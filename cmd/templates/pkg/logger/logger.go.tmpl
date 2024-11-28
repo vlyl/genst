@@ -1,0 +1,64 @@
+package logger
+
+import (
+	"fmt"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
+
+	"{{.ModuleName}}/internal/config"
+)
+
+var log *zap.Logger
+
+func Init(level string) error {
+	cfg := config.Get()
+
+	// Configure log rotation
+	writer := &lumberjack.Logger{
+		Filename:   cfg.Log.Filename,
+		MaxSize:    cfg.Log.MaxSize,
+		MaxAge:     cfg.Log.MaxAge,
+		MaxBackups: cfg.Log.MaxBackups,
+		LocalTime:  true,
+		Compress:   true,
+	}
+
+	// Parse log level
+	var zapLevel zapcore.Level
+	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
+		return fmt.Errorf("invalid log level: %w", err)
+	}
+
+	// Create encoder config
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	// Create core
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderConfig),
+		zapcore.AddSync(writer),
+		zapLevel,
+	)
+
+	// Create logger
+	log = zap.New(core, zap.AddCaller())
+	return nil
+}
+
+func Info(msg string, fields ...zap.Field) {
+	log.Info(msg, fields...)
+}
+
+func Error(msg string, fields ...zap.Field) {
+	log.Error(msg, fields...)
+}
+
+func Debug(msg string, fields ...zap.Field) {
+	log.Debug(msg, fields...)
+}
+
+func Warn(msg string, fields ...zap.Field) {
+	log.Warn(msg, fields...)
+}

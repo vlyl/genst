@@ -1,0 +1,56 @@
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"{{.ModuleName}}/internal/api"
+	"{{.ModuleName}}/internal/config"
+	"{{.ModuleName}}/pkg/database"
+	"{{.ModuleName}}/pkg/logger"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	configFile string
+	logLevel   string
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "server",
+	Short: "Start the HTTP server",
+	RunE:  run,
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "config/config.yaml", "config file path")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "info", "log level (debug, info, warn, error)")
+}
+
+func run(cmd *cobra.Command, args []string) error {
+	// Initialize config
+	if err := config.Init(configFile); err != nil {
+		return fmt.Errorf("failed to initialize config: %w", err)
+	}
+
+	// Initialize logger
+	if err := logger.Init(logLevel); err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
+	}
+
+	// Initialize database
+	if err := database.Init(); err != nil {
+		return fmt.Errorf("failed to initialize database: %w", err)
+	}
+
+	// Start HTTP server
+	router := api.SetupRouter()
+	return router.Run(fmt.Sprintf(":%d", config.Get().Server.Port))
+}
+
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(err)
+	}
+}
