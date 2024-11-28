@@ -2,12 +2,11 @@ name: Build and Release
 
 on:
   push:
-    # 只在创建 tag 时触发
     tags:
       - 'v*'
 
 permissions:
-  contents: write # 添加创建 release 的权限
+  contents: write
 
 jobs:
   build:
